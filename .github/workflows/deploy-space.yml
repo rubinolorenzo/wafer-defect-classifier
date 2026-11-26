@@ -1,7 +1,9 @@
 name: deploy demo to Hugging Face
 
-# Publishes the Gradio demo (app.py + src/ + models/) to a Hugging Face Space
-# on every push to main. Needs a repository secret HF_TOKEN (a Hugging Face
+# Publishes the in-browser demo (web/: index.html + model.onnx + config.json)
+# to a free static Hugging Face Space on every push to main. After retraining,
+# run `python web/export.py` and commit web/ to update it.
+# Needs a repository secret HF_TOKEN (a Hugging Face
 # token with write access). The Space name defaults to
 # rubinolorenzo/wafer-defect-classifier; set a repository variable HF_SPACE
 # to use another one.
@@ -40,40 +42,29 @@ jobs:
         if: steps.token.outputs.ok == 'true'
         run: |
           mkdir space
-          cp -r app.py src models space/
-          # Gradio is provided by the Space itself; CPU-only PyTorch keeps the build small
-          cat > space/requirements.txt <<'EOF'
-          --extra-index-url https://download.pytorch.org/whl/cpu
-          torch
-          numpy
-          pandas
-          scikit-learn
-          scipy
-          matplotlib
-          EOF
+          cp web/index.html web/model.onnx web/config.json space/
           cat > space/README.md <<EOF
           ---
           title: Wafer Defect Classifier
           emoji: 🔬
           colorFrom: blue
           colorTo: gray
-          sdk: gradio
-          app_file: app.py
+          sdk: static
+          app_file: index.html
           pinned: false
           license: mit
-          short_description: Wafer map defect patterns with Grad-CAM and root causes
+          short_description: Wafer map defect patterns with CAM and root causes
           ---
 
           # Wafer map defect classifier
 
           Recognises 9 failure patterns on semiconductor wafer maps (trained on WM-811K),
           shows where the model looked, flags uncertain wafers for an engineer and suggests
-          which process step to investigate.
+          which process step to investigate. The model runs in the browser (ONNX Runtime Web).
 
           Code, method and results: https://github.com/${GITHUB_REPOSITORY}
           EOF
-          sed -i 's/^          //' space/requirements.txt space/README.md
-          find space -name __pycache__ -prune -exec rm -rf {} +
+          sed -i 's/^          //' space/README.md
           find space -type f | sort
 
       - name: Upload to the Space
@@ -86,7 +77,7 @@ jobs:
 
           api = HfApi(token=os.environ["HF_TOKEN"])
           space = os.environ["HF_SPACE"]
-          api.create_repo(space, repo_type="space", space_sdk="gradio", exist_ok=True)
+          api.create_repo(space, repo_type="space", space_sdk="static", exist_ok=True)
           api.upload_folder(
               folder_path="space",
               repo_id=space,

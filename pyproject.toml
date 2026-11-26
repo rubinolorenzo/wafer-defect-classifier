@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest"]
 demo = ["gradio"]
+web = ["onnx"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

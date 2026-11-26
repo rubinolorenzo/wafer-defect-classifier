@@ -77,16 +77,19 @@ python -m wafermap.triage --data data/LSWMD.pkl --model outputs --max-lots 50
 
 The first run caches the cleaned 64×64 maps next to the pickle, so later runs start in seconds. Useful options are `--max-none` (cap on defect-free wafers, default 10 000), `--target-accuracy` (default 0.99) and `--no-baseline`.
 
-## Live demo (Hugging Face Spaces)
+## Live demo
 
-`app.py` is a Gradio app. You can generate a pattern or upload your own map (`.npy` / `.csv`, values 0/1/2). It shows the calibrated probabilities, the Grad-CAM map, the review flag and the process hypotheses.
+**[Open the demo](https://huggingface.co/spaces/rubinolorenzo/wafer-defect-classifier)**: generate a pattern, draw failing dies with the mouse, or upload your own map (`.csv` / `.npy`, values 0/1/2). It shows the calibrated probabilities, the class activation map, the review flag and the process hypotheses.
+
+The model runs **in the browser** with ONNX Runtime Web, so the demo is a free static page with no server. `web/export.py` converts the trained PyTorch model to `web/model.onnx` and adds the class activation maps to the graph: with global average pooling and one linear layer they are exact and need no gradients. A GitHub Action publishes `web/` to Hugging Face Spaces on every push.
+
+After retraining:
 
 ```bash
-pip install -e ".[demo]"
-python app.py
+python web/export.py --model models --out web   # then commit web/
 ```
 
-To publish it, create a free Gradio Space and upload `app.py`, `requirements.txt`, `src/` and `models/`. Put the `wafer_cnn.pt` and `meta.json` from your WM-811K run in `models/`. The demo states which data its model was trained on.
+For a local Gradio version with Grad-CAM, run `pip install -e ".[demo]"` and `python app.py`.
 
 ## Repository structure
 
@@ -102,7 +105,8 @@ src/wafermap/
   triage.py       lot-level report
   rootcause.py    pattern → hypotheses (used by triage and the demo)
   synthetic.py    synthetic maps for tests and demos
-app.py            Gradio demo
+app.py            Gradio demo (local)
+web/              in-browser demo: index.html, model.onnx, export script
 docs/             figures, root-cause guide, example triage report
 tests/            unit tests (run in CI)
 ```
